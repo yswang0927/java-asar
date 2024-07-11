@@ -1,8 +1,5 @@
 package com.gdk.asar;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -11,11 +8,12 @@ import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * Represents a .asar file
@@ -25,7 +23,8 @@ public class AsarArchive implements Closeable, Iterable<VirtualFile> {
     private final RandomAccessFile file;
     private final int baseOffset;
     private final Header header;
-    private final Set<VirtualFile> set;
+    //private final Set<VirtualFile> set;
+    private final ConcurrentHashMap<String, VirtualFile> files = new ConcurrentHashMap<>(256);
 
     public AsarArchive(File file, boolean threadSafe) throws IOException {
         this.path = file.getAbsolutePath();
@@ -43,8 +42,11 @@ public class AsarArchive implements Closeable, Iterable<VirtualFile> {
             close();
             throw new AsarException("Invalid header", e);
         }
-        this.set = threadSafe ? new CopyOnWriteArraySet<>() : new HashSet<>();
-        files(this, "", header.getJson().getJSONObject("files"), set);
+
+        files(this, "", header.getJson().getJSONObject("files"), files);
+
+        //this.set = threadSafe ? new CopyOnWriteArraySet<>() : new HashSet<>();
+        //files(this, "", header.getJson().getJSONObject("files"), set);
     }
 
     public AsarArchive(File file) throws IOException {
@@ -59,7 +61,26 @@ public class AsarArchive implements Closeable, Iterable<VirtualFile> {
         this(new File(path), false);
     }
 
-    private static void files(AsarArchive asar, String path, JSONObject obj, Set<VirtualFile> files) throws JSONException {
+    private static void files(AsarArchive asar, String path, JSONObject obj, ConcurrentHashMap<String, VirtualFile> files) throws JSONException {
+        Iterator<String> keys = obj.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            JSONObject o = obj.getJSONObject(key);
+            JSONObject filesObj = o.optJSONObject("files");
+            String resPath = path.isEmpty() ? key : (path + '/' + key);
+            if (filesObj != null) {
+                files(asar, resPath, filesObj, files);
+            } else {
+                files.putIfAbsent(resPath, new VirtualFile(asar,
+                        resPath,
+                        (o.has("offset") ? o.getInt("offset") : 0) + asar.baseOffset,
+                        o.has("size") ? o.getInt("size") : 0
+                ));
+            }
+        }
+    }
+
+    /*private static void files(AsarArchive asar, String path, JSONObject obj, Set<VirtualFile> files) throws JSONException {
         Iterator<String> keys = obj.keys();
         while (keys.hasNext()) {
             String key = keys.next();
@@ -71,6 +92,14 @@ public class AsarArchive implements Closeable, Iterable<VirtualFile> {
                 files.add(new VirtualFile(asar, path + "/" + key, Integer.parseInt(o.getString("offset")) + asar.baseOffset, o.getInt("size")));
             }
         }
+    }*/
+
+    public byte[] content(String filepath) {
+        VirtualFile vFile = this.files.get(filepath);
+        if (vFile == null) {
+            return new byte[0];
+        }
+        return vFile.read();
     }
 
     public MappedByteBuffer contents(long offset, long size) throws IOException {
@@ -84,7 +113,8 @@ public class AsarArchive implements Closeable, Iterable<VirtualFile> {
 
     @Override
     public Iterator<VirtualFile> iterator() {
-        return set.iterator();
+        return this.files.values().iterator();
+        //return set.iterator();
     }
 
     @Override
@@ -94,6 +124,11 @@ public class AsarArchive implements Closeable, Iterable<VirtualFile> {
             return o.baseOffset == baseOffset && Objects.equals(path, o.path);
         }
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(path, baseOffset);
     }
 
     /**
