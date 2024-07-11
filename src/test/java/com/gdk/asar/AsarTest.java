@@ -23,18 +23,19 @@ public class AsarTest {
         if (!dir.exists()) {
             dir.mkdirs();
         }
+        // 解压全部文件
+        AsarExtractor.extractAll(archive, dir.getAbsolutePath());
 
         // 获取某个文件的内容
         byte[] iconPng = archive.content("img/chrome.png");
         Files.write(new File(dir, "chrome22.png").toPath(), iconPng);
 
         byte[] readme = archive.content("readme.md");
-        if (!"hello asar".equals(new String(readme, StandardCharsets.UTF_8))) {
+        String readmeContent = new String(readme, StandardCharsets.UTF_8);
+        System.out.println("readme.md 文件内容："+ readmeContent);
+        if (!"hello asar".equals(readmeContent)) {
             throw new RuntimeException("读取 readme.md 文件失败，内容不匹配");
         }
-
-        // 解压全部文件
-        AsarExtractor.extractAll(archive, dir.getAbsolutePath());
 
     }
 }
