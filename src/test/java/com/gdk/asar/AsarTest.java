@@ -27,10 +27,10 @@ public class AsarTest {
         AsarExtractor.extractAll(archive, dir.getAbsolutePath());
 
         // 获取某个文件的内容
-        byte[] iconPng = archive.content("img/chrome.png");
+        byte[] iconPng = archive.read("img/chrome.png");
         Files.write(new File(dir, "chrome22.png").toPath(), iconPng);
 
-        byte[] readme = archive.content("readme.md");
+        byte[] readme = archive.read("readme.md");
         String readmeContent = new String(readme, StandardCharsets.UTF_8);
         System.out.println("readme.md 文件内容："+ readmeContent);
         if (!"hello asar".equals(readmeContent)) {

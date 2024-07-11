@@ -2,22 +2,32 @@
 
 ## 用法：
 ```java
-File f = new File("/home/test.asar");
+File f = new File("demo.asar");
 
 AsarArchive archive = new AsarArchive(f);
-
-// 获取头部元数据以JSON格式输出
 System.out.println(archive.getHeader().getJson());
 
-// 遍历asar中的所有文件基本信息(文件路径、大小、偏移量)
+// 迭代asar中的所有文件元数据
 for (VirtualFile vf : archive) {
     System.out.println(vf);
 }
 
-// 解压asar文件到指定目录下
-File dir = new File("/home/asar-unpack");
+// 解压asar文件到当前asar-unpack目录下
+File dir = new File("asar-unpack");
 if (!dir.exists()) {
     dir.mkdirs();
 }
+// 解压全部文件
 AsarExtractor.extractAll(archive, dir.getAbsolutePath());
+
+// 获取某个文件的内容
+byte[] iconPng = archive.read("img/chrome.png");
+Files.write(new File(dir, "chrome22.png").toPath(), iconPng);
+
+byte[] readme = archive.read("readme.md");
+String readmeContent = new String(readme, StandardCharsets.UTF_8);
+System.out.println("readme.md 文件内容："+ readmeContent);
+if (!"hello asar".equals(readmeContent)) {
+    throw new RuntimeException("读取 readme.md 文件失败，内容不匹配");
+}
 ```

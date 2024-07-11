@@ -53,7 +53,7 @@ public final class VirtualFile {
      */
     public ByteBuffer read(ByteBuffer buffer) {
         try {
-            return buffer.put(asar.contents(offset, size));
+            return buffer.put(asar.read(offset, size));
         } catch (IOException e) {
             throw new AsarException("Error reading", e);
         }

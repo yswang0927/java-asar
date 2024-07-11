@@ -98,7 +98,7 @@ public class AsarArchive implements Closeable, Iterable<VirtualFile> {
         return this.files.containsKey(filepath);
     }
 
-    public byte[] content(String filepath) {
+    public byte[] read(String filepath) {
         VirtualFile vFile = this.files.get(filepath);
         if (vFile == null) {
             return new byte[0];
@@ -106,7 +106,7 @@ public class AsarArchive implements Closeable, Iterable<VirtualFile> {
         return vFile.read();
     }
 
-    public MappedByteBuffer contents(long offset, long size) throws IOException {
+    MappedByteBuffer read(long offset, long size) throws IOException {
         return file.getChannel().map(FileChannel.MapMode.READ_ONLY, offset, size);
     }
 
