@@ -16,7 +16,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * Represents a .asar file
+ * Represents a .asar file.
  */
 public class AsarArchive implements Closeable, Iterable<VirtualFile> {
     private final String path;
@@ -93,6 +93,10 @@ public class AsarArchive implements Closeable, Iterable<VirtualFile> {
             }
         }
     }*/
+
+    public boolean contains(String filepath) {
+        return this.files.containsKey(filepath);
+    }
 
     public byte[] content(String filepath) {
         VirtualFile vFile = this.files.get(filepath);
